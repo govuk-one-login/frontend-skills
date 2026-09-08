@@ -1,0 +1,39 @@
+{
+  "cases": [
+    {
+      "case_id": "text-input-basic",
+      "concern": "application",
+      "name": "application::govuk-accessible-component::text-input-basic",
+      "passed": true,
+      "skill": "govuk-accessible-component",
+      "skipped": false
+    },
+    {
+      "case_id": null,
+      "concern": "content",
+      "name": "content::govuk-accessible-component",
+      "passed": true,
+      "skill": "govuk-accessible-component",
+      "skipped": false
+    }
+  ],
+  "concerns": {
+    "application": {
+      "failed": 0,
+      "passed": 1,
+      "total": 1
+    },
+    "content": {
+      "failed": 0,
+      "passed": 1,
+      "total": 1
+    }
+  },
+  "deepeval": null,
+  "schema": "frontend-skills/report@1",
+  "summary": {
+    "failed": 0,
+    "passed": 2,
+    "total": 2
+  }
+}

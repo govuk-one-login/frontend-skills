@@ -1,0 +1,26 @@
+[project]
+name = "frontend-skills-evals"
+version = "0.1.0"
+description = "DeepEval-based evaluation suites for the frontend-skills store"
+requires-python = ">=3.10"
+
+# Full local evaluation dependencies (DeepEval + pytest).
+# These are needed to *generate* and *run* the eval suites locally.
+# CI does NOT install these — see [project.optional-dependencies].ci.
+dependencies = [
+    "deepeval==3.9.9",
+    "pytest==9.1.1",
+    "pyyaml==6.0.2",
+]
+
+[project.optional-dependencies]
+# CI-only, key-free adjudication dependencies. The verifier never calls an LLM,
+# so it deliberately avoids DeepEval and only needs YAML parsing (stdlib hashlib
+# and json cover the rest).
+ci = [
+    "pyyaml==6.0.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["evals", "scripts"]
+python_files = ["test_*.py"]

@@ -1,0 +1,20 @@
+{
+  "algorithm": "sha256",
+  "entries": [
+    {
+      "case_hash": "53e122d76473f6bd93973b7cfb0f0839a42e20022db13a4029fc26c4fa8291f8",
+      "case_id": "text-input-basic",
+      "concern": "application",
+      "fixture_hash": "c22bc82ea18f357f7c64dcd043bcafceb7e83b78e26fd0b82622b14b0ef2ba4d",
+      "skill": "govuk-accessible-component",
+      "skill_hash": "3eb4b6ada02a3520ba80dee2329d6267976b00ca22aace81f68656267c5e0c29"
+    },
+    {
+      "case_id": null,
+      "concern": "content",
+      "skill": "govuk-accessible-component",
+      "skill_hash": "3eb4b6ada02a3520ba80dee2329d6267976b00ca22aace81f68656267c5e0c29"
+    }
+  ],
+  "version": 1
+}

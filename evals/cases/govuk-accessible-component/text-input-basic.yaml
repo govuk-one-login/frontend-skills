@@ -1,0 +1,12 @@
+id: text-input-basic
+skill: govuk-accessible-component
+task: >-
+  Build an accessible GOV.UK Design System text input for a user's full name.
+  Include a visible label and a hint. Return the component markup plus a short
+  note of the accessibility features you implemented.
+expected_criteria:
+  - Uses a native <label> associated with the input via matching for and id attributes
+  - Associates the hint text with the input using aria-describedby
+  - Uses GOV.UK Design System classes (e.g. govuk-form-group, govuk-label, govuk-input)
+  - Does not remove or override the visible GDS focus style
+  - Explains which accessibility features were implemented

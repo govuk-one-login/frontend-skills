@@ -1,0 +1,4 @@
+# CI-only, key-free adjudication dependencies.
+# The verifier (scripts/verify_results.py) never calls an LLM and must not
+# pull in DeepEval or any API-key-requiring package.
+pyyaml==6.0.2

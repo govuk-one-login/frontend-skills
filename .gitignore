@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tooling caches
+.pytest_cache/
+.deepeval/
+.deepeval_cache/
+.deepeval-cache.json
+temp_test_run_data.json
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
+
+# --- Explicitly tracked (do NOT ignore) ---
+# The committed evaluation artifacts are the heart of the CI gate.
+!evals/fixtures/
+!evals/fixtures/**
+!evals/results/
+!evals/results/**

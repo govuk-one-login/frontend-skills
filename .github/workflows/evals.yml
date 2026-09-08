@@ -1,0 +1,38 @@
+name: evals
+
+# Adjudicate committed evaluation results on every pull request (and on pushes
+# to the default branch). This gate is key-free: it never runs an agent or LLM
+# and requires no secrets, so it works for fork PRs too.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# No secrets are needed; keep the token read-only.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify committed eval results
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install CI-only dependencies (no DeepEval / no LLM)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: Adjudicate committed results
+        # verify_results.py exits non-zero on missing, stale, tampered, or
+        # failing results, which fails the check. It writes a human-readable
+        # summary to the job summary via $GITHUB_STEP_SUMMARY.
+        run: python scripts/verify_results.py
