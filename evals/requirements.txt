@@ -1,5 +1,7 @@
 # Full local evaluation dependencies (DeepEval + pytest).
 # Use this to generate outputs and run the DeepEval suites locally.
+# `ollama` is DeepEval's client for the pinned local judge model (qwen2.5:14b).
 deepeval==3.9.9
+ollama==0.6.3
 pytest==9.1.1
 pyyaml==6.0.2

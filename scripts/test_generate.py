@@ -48,6 +48,8 @@ def test_generate_records_fixture_and_manifest(tmp_path):
         assert len(app_entries) == 1
         entry = app_entries[0]
         assert entry["skill_hash"] and entry["case_hash"] and entry["fixture_hash"]
+        # --output path records a manual generation model.
+        assert entry["generation_model"] == "manual"
 
         # Re-running with identical content yields identical hashes (stable).
         rc2 = gen.main(["--case", str(case_path), "--output", str(src), "--filename", "output.md"])

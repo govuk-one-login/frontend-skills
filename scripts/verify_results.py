@@ -6,16 +6,21 @@ the committed artifacts and performs a fast, deterministic check:
 
 1. ``evals/results/report.json`` exists and is valid (our schema).
 2. ``evals/results/manifest.json`` exists and is valid.
-3. Every manifest entry's recorded hashes match freshly recomputed hashes of the
+3. ``evals/results/signature.json`` exists and its HMAC matches a fresh
+   recomputation over the committed report + manifest + pinned model names
+   (tamper-evidence: a hand-edited report is rejected).
+4. The signed generation/judge model names are the repo's pinned models.
+5. Every manifest entry's recorded hashes match freshly recomputed hashes of the
    current committed skills, task cases, and fixtures (freshness / integrity).
-4. No recorded case in the report is a failure.
+6. Every graded case that carries a score satisfies ``score >= threshold``.
+7. No recorded case in the report is a failure.
 
 Exit code is 0 on success and non-zero on any problem, with a clear, actionable
 message. When run under GitHub Actions, a summary is also written to
 ``$GITHUB_STEP_SUMMARY``.
 
 It deliberately imports only stdlib + the stdlib/PyYAML-only ``evals.lib``
-helpers (hashing/manifest/paths); it never imports DeepEval.
+helpers (hashing/manifest/signing/models/paths); it never imports DeepEval.
 """
 
 from __future__ import annotations
@@ -29,17 +34,28 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from evals.lib.hashing import hash_skill, hash_case, hash_fixture  # noqa: E402
+from evals.lib.hashing import hash_skill, hash_case, hash_fixture, hash_golden  # noqa: E402
 from evals.lib.manifest import read_manifest  # noqa: E402
+from evals.lib.signing import verify_signature  # noqa: E402
+from evals.lib.models import (  # noqa: E402
+    GENERATION_MODEL,
+    JUDGE_MODEL,
+    MANUAL_GENERATION_MODEL,
+)
 from evals.lib.paths import (  # noqa: E402
     report_path,
     manifest_path,
+    signature_path,
     skills_dir,
     cases_dir,
     fixtures_dir,
+    golden_dir,
 )
 
-REPORT_SCHEMA = "frontend-skills/report@1"
+REPORT_SCHEMA = "frontend-skills/report@2"
+# Tolerate the pre-signing schema so an older committed report produces a clear,
+# actionable "regenerate + re-sign" message rather than an opaque failure.
+LEGACY_REPORT_SCHEMA = "frontend-skills/report@1"
 
 
 class VerificationError(Exception):
@@ -64,14 +80,39 @@ def _load_report() -> dict:
         report = json.loads(p.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise VerificationError(f"report.json is not valid JSON: {exc}") from exc
-    if not isinstance(report, dict) or report.get("schema") != REPORT_SCHEMA:
+    if not isinstance(report, dict) or report.get("schema") not in (
+        REPORT_SCHEMA,
+        LEGACY_REPORT_SCHEMA,
+    ):
         raise VerificationError(
             f"report.json has an unexpected schema (want {REPORT_SCHEMA!r})."
+        )
+    if report.get("schema") == LEGACY_REPORT_SCHEMA:
+        raise VerificationError(
+            "report.json uses the pre-signing schema "
+            f"({LEGACY_REPORT_SCHEMA!r}); regenerate and re-sign results locally "
+            "(make eval && make sign)."
         )
     for field in ("summary", "concerns", "cases"):
         if field not in report:
             raise VerificationError(f"report.json is missing '{field}'.")
     return report
+
+
+def _load_signature() -> dict:
+    p = signature_path()
+    if not p.is_file():
+        raise VerificationError(
+            f"signature missing: {_rel(p)} not found — sign results locally "
+            f"(make sign) and commit signature.json."
+        )
+    try:
+        signature = json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise VerificationError(f"signature.json is not valid JSON: {exc}") from exc
+    if not isinstance(signature, dict):
+        raise VerificationError("signature.json is not a JSON object.")
+    return signature
 
 
 def _load_manifest() -> dict:
@@ -129,6 +170,76 @@ def _recompute(entry: dict) -> list[str]:
             elif hash_fixture(fdir) != entry["fixture_hash"]:
                 problems.append(f"fixture for '{skill}/{case_id}' changed")
 
+        if "golden_hash" in entry:
+            gdir = golden_dir() / skill / case_id
+            if not gdir.is_dir():
+                problems.append(f"golden for '{skill}/{case_id}' is missing")
+            elif hash_golden(gdir) != entry["golden_hash"]:
+                problems.append(f"golden for '{skill}/{case_id}' changed")
+
+    return problems
+
+
+def _check_signature_and_models(report: dict) -> list[str]:
+    """Verify the HMAC signature and the pinned-model policy."""
+    problems: list[str] = []
+    signature = _load_signature()
+
+    sig_problems = verify_signature(
+        signature, report_path=report_path(), manifest_path=manifest_path()
+    )
+    problems.extend(sig_problems)
+    if sig_problems:
+        # If the signature itself is broken/tampered, the model-policy check
+        # below would be meaningless, so stop here.
+        return problems
+
+    signed = signature.get("signed", {})
+    gen = signed.get("generation_model")
+    judge = signed.get("judge_model")
+
+    if gen not in (GENERATION_MODEL, MANUAL_GENERATION_MODEL):
+        problems.append(
+            f"signed generation_model {gen!r} is not the pinned model "
+            f"{GENERATION_MODEL!r} (or {MANUAL_GENERATION_MODEL!r})"
+        )
+    if judge != JUDGE_MODEL:
+        problems.append(
+            f"signed judge_model {judge!r} is not the pinned judge {JUDGE_MODEL!r}"
+        )
+
+    # Cross-check the report's own models block when present.
+    report_models = report.get("models") or {}
+    if report_models:
+        if report_models.get("judge") not in (None, JUDGE_MODEL):
+            problems.append(
+                f"report.json records judge model {report_models.get('judge')!r}, "
+                f"expected {JUDGE_MODEL!r}"
+            )
+
+    return problems
+
+
+def _check_scores(report: dict) -> list[str]:
+    """Re-assert score >= threshold for every graded case that carries a score."""
+    problems: list[str] = []
+    for c in report.get("cases", []):
+        score = c.get("score")
+        threshold = c.get("threshold")
+        if score is None or threshold is None:
+            # Not graded (e.g. model-less skipped run) — nothing to re-check.
+            continue
+        try:
+            if float(score) < float(threshold):
+                problems.append(
+                    f"case {c.get('name')!r} scored {score} below its "
+                    f"threshold {threshold}"
+                )
+        except (TypeError, ValueError):
+            problems.append(
+                f"case {c.get('name')!r} has a non-numeric score/threshold "
+                f"({score!r}/{threshold!r})"
+            )
     return problems
 
 
@@ -139,7 +250,10 @@ def verify() -> list[str]:
     report = _load_report()
     manifest = _load_manifest()
 
-    # 1. Freshness / integrity.
+    # 1. Signature (tamper-evidence) + pinned-model policy.
+    problems.extend(_check_signature_and_models(report))
+
+    # 2. Freshness / integrity.
     stale: list[str] = []
     for entry in manifest["entries"]:
         stale.extend(_recompute(entry))
@@ -149,7 +263,10 @@ def verify() -> list[str]:
             + "\n    - ".join(stale)
         )
 
-    # 2. Recorded failures.
+    # 3. Score thresholds for graded cases.
+    problems.extend(_check_scores(report))
+
+    # 4. Recorded failures.
     failed_cases = [c for c in report.get("cases", []) if not c.get("passed", False)]
     if failed_cases:
         names = ", ".join(
@@ -157,7 +274,7 @@ def verify() -> list[str]:
         )
         problems.append(f"one or more recorded eval cases failed: {names}")
 
-    # 3. Sanity: report must reference at least one case.
+    # 5. Sanity: report must reference at least one case.
     if not report.get("cases"):
         problems.append("report.json records no cases.")
 
@@ -180,8 +297,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Key-free CI adjudicator: validate committed report.json + "
-            "manifest.json, recompute content hashes to prove freshness, and "
-            "fail on missing/stale/tampered/failing results. Never calls an LLM."
+            "manifest.json + signature.json, recompute content hashes and the "
+            "HMAC signature to prove freshness/integrity, enforce the pinned "
+            "models and per-case score thresholds, and fail on "
+            "missing/stale/tampered/failing results. Never calls an LLM."
         )
     )
     parser.parse_args(argv)

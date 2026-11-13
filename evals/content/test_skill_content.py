@@ -20,6 +20,7 @@ import os
 import pytest
 
 from evals.lib import discover_skills
+from evals.lib.models import JUDGE_MODEL, build_judge_model, ollama_base_url
 from evals.lib.reporting import CaseLabel, register_case
 
 SKILLS = discover_skills()
@@ -32,11 +33,23 @@ _MODEL_ENV_VARS = (
     "DEEPEVAL_MODEL",
     "GEMINI_API_KEY",
     "OLLAMA_MODEL",
+    "LOCAL_MODEL_API_KEY",
 )
 
 
+def _ollama_reachable() -> bool:
+    """True if a local Ollama server answers at the configured base URL."""
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(f"{ollama_base_url()}/api/tags", timeout=1.0):
+            return True
+    except Exception:
+        return False
+
+
 def _has_local_model() -> bool:
-    return any(os.getenv(v) for v in _MODEL_ENV_VARS)
+    return any(os.getenv(v) for v in _MODEL_ENV_VARS) or _ollama_reachable()
 
 
 def _skill_ids():
@@ -62,13 +75,15 @@ def test_skill_clarity_completeness(skill):
     """LLM-judge clarity/completeness (G-Eval), run locally with the dev's model."""
     if not _has_local_model():
         pytest.skip(
-            "no local judge model configured (set e.g. OPENAI_API_KEY); "
+            "no local judge model configured (start Ollama and "
+            f"`ollama pull {JUDGE_MODEL}`, or set e.g. OPENAI_API_KEY); "
             "deterministic content checks still enforced"
         )
 
-    from deepeval import assert_test
     from deepeval.metrics import GEval
     from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+
+    from evals.lib.reporting import record_score
 
     name = register_case(
         f"content::{skill.name}",
@@ -77,6 +92,7 @@ def test_skill_clarity_completeness(skill):
 
     clarity = GEval(
         name="Clarity and completeness",
+        model=build_judge_model(),
         criteria=(
             "Evaluate whether the skill document (the actual output) is clear, "
             "internally consistent (no contradictions), and complete: it should "
@@ -93,4 +109,20 @@ def test_skill_clarity_completeness(skill):
         input=f"Assess the clarity and completeness of the skill '{skill.name}'.",
         actual_output=skill.raw_text,
     )
-    assert_test(test_case, [clarity])
+
+    # Grade with measure() (not assert_test) so we can read the numeric score
+    # off the metric object; assert_test deep-copies metrics and leaves the
+    # passed-in object's score unset. The recorded score is what CI re-checks.
+    clarity.measure(test_case)
+    record_score(
+        "content",
+        skill.name,
+        None,
+        score=clarity.score,
+        threshold=clarity.threshold,
+        success=clarity.is_successful(),
+    )
+    assert clarity.is_successful(), (
+        f"content clarity/completeness for '{skill.name}' scored "
+        f"{clarity.score} below threshold {clarity.threshold}: {clarity.reason}"
+    )

@@ -1,35 +1,46 @@
 """Task-case discovery and parsing.
 
 A task case lives at ``evals/cases/<skill>/<case-id>.yaml`` and defines a single
-skill-application evaluation:
+skill-application evaluation: one **prompt** paired with one **golden example**
+(the expected high-quality output for that prompt). Coverage grows by adding
+more cases (more prompt/example pairs), not by adding alternative goldens to a
+single case.
 
 ```yaml
-id: text-input-basic          # optional; defaults to the file stem
+id: text-input-basic              # optional; defaults to the file stem
 skill: govuk-accessible-component
-task: >-
+prompt: >-
   Build an accessible GOV.UK text input for a user's full name, with a label
   and a hint.
-expected_criteria:
-  - Uses a <label> associated with the input via for/id
-  - Associates hint text with the input via aria-describedby
-  - Preserves the visible GDS focus style
+must_contain:                     # deterministic: all must appear in the output
+  - aria-describedby
+  - 'for="full-name"'
+must_not_contain:                 # deterministic: none may appear in the output
+  - 'outline: none'
 ```
 
+The golden example for a case lives at
+``evals/golden/<skill>/<case-id>/`` (one or more files; their concatenation is
+the single expected output for that prompt). At eval time the current skill is
+applied to ``prompt`` to generate fresh output, which is then graded both
+deterministically (``must_contain`` / ``must_not_contain``) and by an LLM judge
+against the golden.
+
 - ``skill`` must reference an existing skill directory name.
-- ``task`` is the prompt handed to the local agent.
-- ``expected_criteria`` is a non-empty list of grading criteria used by the
-  application-eval G-Eval metric.
+- ``prompt`` is the instruction handed to the local generation model.
+- ``must_contain`` / ``must_not_contain`` are optional lists of substrings the
+  generated output must / must not contain (checked case-sensitively).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from evals.lib.paths import cases_dir
+from evals.lib.paths import cases_dir, golden_dir
 
 
 class CaseFormatError(ValueError):
@@ -40,13 +51,37 @@ class CaseFormatError(ValueError):
 class Case:
     id: str
     skill: str
-    task: str
-    expected_criteria: list[str]
-    path: Path
+    prompt: str
+    must_contain: list[str] = field(default_factory=list)
+    must_not_contain: list[str] = field(default_factory=list)
+    path: Path | None = None
 
     @property
-    def expected_criteria_text(self) -> str:
-        return "\n".join(f"- {c}" for c in self.expected_criteria)
+    def golden_path(self) -> Path:
+        """Directory holding this case's golden example file(s)."""
+        return golden_dir() / self.skill / self.id
+
+    def golden_text(self) -> str:
+        """Concatenate all golden files for this case (empty if none)."""
+        gdir = self.golden_path
+        if not gdir.is_dir():
+            return ""
+        parts = [
+            f.read_text(encoding="utf-8")
+            for f in sorted(gdir.rglob("*"))
+            if f.is_file()
+        ]
+        return "\n\n".join(parts)
+
+
+def _str_list(value: Any, field_name: str, case_path: Path) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise CaseFormatError(
+            f"case {case_path}: '{field_name}' must be a list of strings"
+        )
+    return [v for v in value if v.strip()]
 
 
 def load_case(case_path: Path) -> Case:
@@ -62,25 +97,25 @@ def load_case(case_path: Path) -> Case:
 
     case_id = str(data.get("id") or case_path.stem)
     skill = data.get("skill")
-    task = data.get("task")
-    criteria = data.get("expected_criteria")
+    # Accept 'prompt' (current) and fall back to legacy 'task' if present.
+    prompt = data.get("prompt") or data.get("task")
 
     if not skill or not isinstance(skill, str):
         raise CaseFormatError(f"case {case_path} missing string field 'skill'")
-    if not task or not isinstance(task, str):
-        raise CaseFormatError(f"case {case_path} missing string field 'task'")
-    if not criteria or not isinstance(criteria, list) or not all(
-        isinstance(c, str) and c.strip() for c in criteria
-    ):
-        raise CaseFormatError(
-            f"case {case_path} needs a non-empty list of string 'expected_criteria'"
-        )
+    if not prompt or not isinstance(prompt, str):
+        raise CaseFormatError(f"case {case_path} missing string field 'prompt'")
+
+    must_contain = _str_list(data.get("must_contain"), "must_contain", case_path)
+    must_not_contain = _str_list(
+        data.get("must_not_contain"), "must_not_contain", case_path
+    )
 
     return Case(
         id=case_id,
         skill=skill,
-        task=task.strip(),
-        expected_criteria=[c.strip() for c in criteria],
+        prompt=prompt.strip(),
+        must_contain=must_contain,
+        must_not_contain=must_not_contain,
         path=case_path,
     )
 

@@ -69,7 +69,7 @@ def test_manifest_roundtrip_and_upsert(tmp_path):
     write_manifest(m, path)
 
     loaded = read_manifest(path)
-    assert loaded["version"] == 1
+    assert loaded["version"] == 2
     assert loaded["algorithm"] == "sha256"
     assert len(loaded["entries"]) == 1
 

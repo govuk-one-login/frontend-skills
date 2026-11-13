@@ -53,3 +53,8 @@ def hash_case(case_path: Path) -> str:
 def hash_fixture(fixture_dir: Path) -> str:
     """Content hash of a fixture output directory (all files within)."""
     return _hash_tree(Path(fixture_dir))
+
+
+def hash_golden(golden_dir: Path) -> str:
+    """Content hash of a case's golden example directory (all files within)."""
+    return _hash_tree(Path(golden_dir))
