@@ -13,6 +13,7 @@ from evals.lib.hashing import (
     hash_skill,
     hash_case,
     hash_fixture,
+    hash_golden,
 )
 from evals.lib.manifest import (
     MANIFEST_VERSION,
@@ -26,9 +27,24 @@ from evals.lib.paths import (
     skills_dir,
     cases_dir,
     fixtures_dir,
+    golden_dir,
     results_dir,
     report_path,
     manifest_path,
+    signature_path,
+)
+from evals.lib.models import (
+    GENERATION_MODEL,
+    JUDGE_MODEL,
+    MANUAL_GENERATION_MODEL,
+    ollama_base_url,
+    build_judge_model,
+)
+from evals.lib.signing import (
+    SIGNATURE_SCHEMA,
+    SIGNATURE_ALGORITHM,
+    compute_signature,
+    verify_signature,
 )
 
 __all__ = [
@@ -44,6 +60,7 @@ __all__ = [
     "hash_skill",
     "hash_case",
     "hash_fixture",
+    "hash_golden",
     "MANIFEST_VERSION",
     "build_manifest_entry",
     "read_manifest",
@@ -53,7 +70,18 @@ __all__ = [
     "skills_dir",
     "cases_dir",
     "fixtures_dir",
+    "golden_dir",
     "results_dir",
     "report_path",
     "manifest_path",
+    "signature_path",
+    "GENERATION_MODEL",
+    "JUDGE_MODEL",
+    "MANUAL_GENERATION_MODEL",
+    "ollama_base_url",
+    "build_judge_model",
+    "SIGNATURE_SCHEMA",
+    "SIGNATURE_ALGORITHM",
+    "compute_signature",
+    "verify_signature",
 ]

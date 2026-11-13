@@ -2,10 +2,12 @@
   "algorithm": "sha256",
   "entries": [
     {
-      "case_hash": "53e122d76473f6bd93973b7cfb0f0839a42e20022db13a4029fc26c4fa8291f8",
+      "case_hash": "7b2b35852cd59044221abad62b31b8f1857cff19ff4b06eef80d81ce905da128",
       "case_id": "text-input-basic",
       "concern": "application",
-      "fixture_hash": "c22bc82ea18f357f7c64dcd043bcafceb7e83b78e26fd0b82622b14b0ef2ba4d",
+      "fixture_hash": "8dfa692eb475c90dadff475a7647e3ec60ecf7baf424ed9e1af776ac8bac371a",
+      "generation_model": "qwen2.5:7b",
+      "golden_hash": "07cfae4890c665cc43c7123a667f748e86c978e5ebe4d4e126ebc5b7c384db2d",
       "skill": "govuk-accessible-component",
       "skill_hash": "3eb4b6ada02a3520ba80dee2329d6267976b00ca22aace81f68656267c5e0c29"
     },

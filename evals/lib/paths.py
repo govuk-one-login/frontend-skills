@@ -22,6 +22,10 @@ def fixtures_dir() -> Path:
     return repo_root() / "evals" / "fixtures"
 
 
+def golden_dir() -> Path:
+    return repo_root() / "evals" / "golden"
+
+
 def results_dir() -> Path:
     return repo_root() / "evals" / "results"
 
@@ -32,3 +36,7 @@ def report_path() -> Path:
 
 def manifest_path() -> Path:
     return results_dir() / "manifest.json"
+
+
+def signature_path() -> Path:
+    return results_dir() / "signature.json"

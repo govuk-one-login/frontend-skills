@@ -3,18 +3,24 @@
     {
       "case_id": "text-input-basic",
       "concern": "application",
+      "metric_success": true,
       "name": "application::govuk-accessible-component::text-input-basic",
       "passed": true,
+      "score": 0.8,
       "skill": "govuk-accessible-component",
-      "skipped": false
+      "skipped": false,
+      "threshold": 0.7
     },
     {
       "case_id": null,
       "concern": "content",
+      "metric_success": true,
       "name": "content::govuk-accessible-component",
       "passed": true,
+      "score": 0.8,
       "skill": "govuk-accessible-component",
-      "skipped": false
+      "skipped": false,
+      "threshold": 0.7
     }
   ],
   "concerns": {
@@ -30,7 +36,11 @@
     }
   },
   "deepeval": null,
-  "schema": "frontend-skills/report@1",
+  "models": {
+    "generation": "qwen2.5:7b",
+    "judge": "qwen2.5:14b"
+  },
+  "schema": "frontend-skills/report@2",
   "summary": {
     "failed": 0,
     "passed": 2,

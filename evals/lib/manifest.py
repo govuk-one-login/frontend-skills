@@ -19,7 +19,9 @@ Manifest shape:
       "case_id": "text-input-basic",
       "skill_hash": "…",
       "case_hash": "…",
-      "fixture_hash": "…"
+      "fixture_hash": "…",
+      "golden_hash": "…",
+      "generation_model": "qwen2.5:7b"
     },
     {
       "concern": "content",
@@ -41,7 +43,7 @@ from typing import Any
 from evals.lib.hashing import ALGORITHM
 from evals.lib.paths import manifest_path
 
-MANIFEST_VERSION = 1
+MANIFEST_VERSION = 2
 
 
 def _entry_key(concern: str, skill: str, case_id: str | None) -> tuple[str, str, str | None]:
@@ -56,8 +58,10 @@ def build_manifest_entry(
     skill_hash: str | None = None,
     case_hash: str | None = None,
     fixture_hash: str | None = None,
+    golden_hash: str | None = None,
+    generation_model: str | None = None,
 ) -> dict[str, Any]:
-    """Construct a single manifest entry, omitting hashes that don't apply."""
+    """Construct a single manifest entry, omitting values that don't apply."""
     if concern not in ("content", "application"):
         raise ValueError(f"unknown concern: {concern!r}")
     entry: dict[str, Any] = {
@@ -71,6 +75,10 @@ def build_manifest_entry(
         entry["case_hash"] = case_hash
     if fixture_hash is not None:
         entry["fixture_hash"] = fixture_hash
+    if golden_hash is not None:
+        entry["golden_hash"] = golden_hash
+    if generation_model is not None:
+        entry["generation_model"] = generation_model
     return entry
 
 

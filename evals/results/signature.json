@@ -1,0 +1,11 @@
+{
+  "algorithm": "hmac-sha256",
+  "schema": "frontend-skills/signature@1",
+  "signature": "a91b5af6760640efd279b3b0b90db54f06bf49a807639ee943b2655d6a2fe974",
+  "signed": {
+    "generation_model": "qwen2.5:7b",
+    "judge_model": "qwen2.5:14b",
+    "manifest_hash": "c426439da7c148f914b46fa0a2a260c88bc75dba776ffdeefbee0a9f3054b432",
+    "report_hash": "b1c23f1f61e126e0e2031c8ca3b82d1b3d047dff601b2c0603d2157958244500"
+  }
+}

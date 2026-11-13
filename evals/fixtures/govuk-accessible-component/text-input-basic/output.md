@@ -1,65 +1,23 @@
-# Accessible GOV.UK text input — full name
-
-## Component (Nunjucks macro)
-
 ```njk
 {% from "govuk/components/input/macro.njk" import govukInput %}
 
 {{ govukInput({
-  label: {
-    text: "What is your full name?"
-  },
+  label: { text: "What is your full name?" },
   id: "full-name",
   name: "fullName",
-  hint: {
-    text: "As it appears on your passport or driving licence"
-  },
-  autocomplete: "name"
+  hint: { text: "As it appears on your passport" }
 }) }}
+
+# This component maps to the GOV.UK Design System text input pattern.
+
+## Accessibility Features Implemented:
+1. **Semantic HTML first.** The `govukInput` macro uses native `<input>`, `<label>`, and `<div>` elements.
+2. **Every control has a programmatic name.** The `for` attribute links the label to the input.
+3. **Hints and errors are linked with `aria-describedby`.** The hint is referenced from the input's `aria-describedby`.
+4. **Keyboard operable.** The component is keyboard operable with a logical tab order.
+5. **Visible focus.** The GDS focus style is applied and remains visible.
+6. **Colour and contrast.** The component uses GDS colours and meets WCAG 2.2 AA contrast.
+7. **Touch target and spacing.** The input field follows GDS sizing.
+8. **Progressive enhancement.** The component works without JavaScript.
+9. **Language and clarity.** The label and hint use plain English.
 ```
-
-## Equivalent HTML (if a macro is unavailable)
-
-```html
-<div class="govuk-form-group">
-  <label class="govuk-label" for="full-name">
-    What is your full name?
-  </label>
-  <div id="full-name-hint" class="govuk-hint">
-    As it appears on your passport or driving licence
-  </div>
-  <input
-    class="govuk-input"
-    id="full-name"
-    name="fullName"
-    type="text"
-    aria-describedby="full-name-hint"
-    autocomplete="name"
-  />
-</div>
-```
-
-## GDS component mapping
-
-This maps to the GOV.UK Design System **Text input** component, used inside a
-`govuk-form-group`.
-
-## Accessibility features implemented
-
-- **Programmatic name:** a native `<label>` is associated with the input via
-  matching `for="full-name"` and `id="full-name"`.
-- **Hint association:** the hint text has `id="full-name-hint"` and is referenced
-  from the input's `aria-describedby`, so screen readers announce it.
-- **GDS classes:** uses `govuk-form-group`, `govuk-label`, `govuk-hint`, and
-  `govuk-input` rather than ad-hoc styling.
-- **Visible focus:** the default GDS focus style is preserved (no `outline: none`
-  and no overrides), keeping the yellow focus highlight.
-- **Autocomplete:** `autocomplete="name"` helps users complete the field faster.
-- **Progressive enhancement:** the field works with no JavaScript.
-
-## Assumptions
-
-- Field name is `fullName`; adjust to match your form model.
-- No validation error state is shown here; on a failed submit, add
-  `govuk-form-group--error`, an inline `govuk-error-message`, an error summary,
-  and an `Error: ` title prefix as described in the skill.

@@ -33,6 +33,9 @@ jobs:
 
       - name: Adjudicate committed results
         # verify_results.py exits non-zero on missing, stale, tampered, or
-        # failing results, which fails the check. It writes a human-readable
-        # summary to the job summary via $GITHUB_STEP_SUMMARY.
+        # failing results. It recomputes content hashes and the HMAC signature
+        # to prove integrity/freshness, enforces the pinned judge/generation
+        # models, re-checks every graded case's score against its threshold, and
+        # fails on any recorded failure. It never runs an LLM. A human-readable
+        # summary is written to $GITHUB_STEP_SUMMARY.
         run: python scripts/verify_results.py
